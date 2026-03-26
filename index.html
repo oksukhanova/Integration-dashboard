@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>IPOP Integration Progress Dashboard</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#f1f5f9;min-height:100vh;color:#1e293b}
+  .header{background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);color:#fff;padding:22px 28px 18px}
+  .header-sub{font-size:10px;font-weight:700;letter-spacing:.12em;color:#475569;text-transform:uppercase;margin-bottom:4px}
+  .header h1{font-size:20px;font-weight:800;letter-spacing:-.02em}
+  .header-meta{font-size:11px;color:#64748b;margin-top:3px}
+  .stats{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+  .stat{background:rgba(255,255,255,.06);border-radius:10px;padding:9px 17px}
+  .stat-n{font-size:22px;font-weight:800}
+  .stat-l{font-size:10px;color:#64748b;font-weight:600;margin-top:1px}
+  .toolbar{background:#fff;border-bottom:1px solid #e2e8f0;padding:11px 28px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .toolbar span{font-size:11px;color:#64748b;font-weight:600}
+  .btn{padding:5px 13px;font-size:11px;font-weight:700;border-radius:7px;border:none;cursor:pointer;transition:background .15s}
+  .btn.active{background:#1e293b;color:#fff}
+  .btn.inactive{background:#f1f5f9;color:#64748b}
+  .btn.week.active{background:#6366f1;color:#fff}
+  input[type=search]{border:1px solid #e2e8f0;border-radius:8px;padding:5px 11px;font-size:12px;width:220px;outline:none}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;padding:20px 28px}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .col-header{border-radius:12px;padding:13px 16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+  .col-title{font-weight:700;font-size:14px}
+  .col-sub{font-size:11px;color:#94a3b8;margin-top:2px}
+  .col-badge{border-radius:20px;min-width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;padding:0 8px}
+  .group{background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;overflow:hidden;margin-bottom:10px}
+  .group-hdr{width:100%;display:flex;justify-content:space-between;align-items:center;padding:9px 13px;background:none;border:none;cursor:pointer;text-align:left}
+  .group-name{font-size:11px;font-weight:700;color:#374151}
+  .group-right{display:flex;align-items:center;gap:7px}
+  .group-cnt{border-radius:12px;padding:1px 8px;font-size:11px;font-weight:700;color:#fff}
+  .arrow{color:#94a3b8;font-size:11px;transition:transform .2s;display:inline-block}
+  .group-body{padding:0 9px 9px;display:flex;flex-direction:column;gap:7px}
+  .card{background:#fff;border-radius:10px;border:1px solid #e2e8f0;padding:11px 14px;transition:box-shadow .15s}
+  .card:hover{box-shadow:0 3px 12px rgba(0,0,0,.08)}
+  .card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+  .card-key{font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;text-decoration:none}
+  .bug-badge{font-size:9px;background:#fef2f2;color:#ef4444;border:1px solid #fecaca;padding:1px 6px;border-radius:4px;font-weight:700}
+  .card-title{font-size:12px;font-weight:600;line-height:1.35;margin-bottom:5px}
+  .partner-tag{font-size:10px;background:#f1f5f9;color:#64748b;padding:2px 7px;border-radius:4px;display:inline-block;margin-bottom:5px}
+  .card-footer{display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding-top:6px;border-top:1px solid #f1f5f9}
+  .status-pill{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600}
+  .assignee{display:flex;align-items:center;gap:4px}
+  .avatar{width:16px;height:16px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#fff;flex-shrink:0}
+  .assignee-name{font-size:10px;color:#94a3b8}
+  .date{font-size:9px;color:#cbd5e1;margin-left:4px}
+  .empty{text-align:center;padding:32px;color:#cbd5e1;font-size:13px;background:#fff;border-radius:10px;border:1px dashed #e2e8f0}
+  .footer{border-top:1px solid #e2e8f0;padding:10px 28px;text-align:center;background:#fff;font-size:11px;color:#94a3b8}
+  .sep{width:1px;height:22px;background:#e2e8f0}
+  #no-results{display:none;text-align:center;padding:48px;color:#64748b;font-size:14px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-sub">Payment Platform · IPOP</div>
+  <h1>Integration Progress Dashboard</h1>
+  <div class="header-meta">📅 Generated: <span id="gen-date"></span> &nbsp;·&nbsp; 100 issues from Jira PP (last 30 days)</div>
+  <div class="stats">
+    <div class="stat"><div class="stat-n" id="cnt-dev">–</div><div class="stat-l">⚙️ In Development</div></div>
+    <div class="stat"><div class="stat-n" id="cnt-test">–</div><div class="stat-l">🧪 Testing</div></div>
+    <div class="stat"><div class="stat-n" id="cnt-live">–</div><div class="stat-l">🚀 Transferred to Live</div></div>
+    <div class="stat"><div class="stat-n" id="cnt-total">–</div><div class="stat-l">📋 Total</div></div>
+  </div>
+</div>
+
+<div class="toolbar">
+  <span>📅 Week:</span>
+  <div id="week-btns" style="display:flex;gap:6px;flex-wrap:wrap">
+    <button class="btn week active" data-week="all" onclick="setWeek('all')">All</button>
+  </div>
+  <div class="sep"></div>
+  <span>Group by:</span>
+  <button class="btn active" id="btn-partner" onclick="setGroup('partner')">Partner</button>
+  <button class="btn inactive" id="btn-provider" onclick="setGroup('provider')">Provider</button>
+  <div class="sep"></div>
+  <input type="search" id="search" placeholder="🔍  Search…" oninput="render()"/>
+</div>
+
+<div class="grid" id="grid"></div>
+<div id="no-results">No issues match your filters.</div>
+
+<div class="footer">
+  Integration Dashboard · modumsystems.atlassian.net · Data snapshot: <span id="snap-date"></span>
+</div>
+
+<script>
+const ISSUES = [
+  {k:"PP-3899",s:"Development: Wallettec CIV for Dalapay",st:"К выполнению",a:"ivan.kolesov",u:"2026-03-26",bug:false},
+  {k:"PP-3897",s:"[Bug]  Development: Mpesa (Safaricom) for Almarapay. B2C transaction is not finalized [9515]",st:"К выполнению",a:"Boris Ziminov",u:"2026-03-26",bug:true},
+  {k:"PP-3896",s:"Development: Wallettec Togo for Dalapay",st:"К выполнению",a:"ivan.kolesov",u:"2026-03-26",bug:false},
+  {k:"PP-3900",s:"Development: Wallettec for Dalapay",st:"К выполнению",a:"Oksana Sukhanova",u:"2026-03-26",bug:false},
+  {k:"PP-2131",s:"Integration: Wallettec for Dalapay",st:"В работе",a:"Oksana Sukhanova",u:"2026-03-26",bug:false},
+  {k:"PP-3383",s:"Development: Mpesa (Safaricom) for Almarapay",st:"Ready for testing",a:"Shukhrat Mirzaev",u:"2026-03-26",bug:false},
+  {k:"PP-3819",s:"Development: Korapay for Paysnapper",st:"IN TESTING",a:"Kirill Sukhanov",u:"2026-03-26",bug:false},
+  {k:"PP-3637",s:"Tags & Integration types: Provider ID card",st:"Ready for release",a:"Julia Zhigareva",u:"2026-03-26",bug:false},
+  {k:"PP-3858",s:"Development: Jaytech (RWA, KE) for Sauripay",st:"В работе",a:"ivan.kolesov",u:"2026-03-26",bug:false},
+  {k:"PP-3866",s:"Transfer to Live: [2571]  E-Money873crSRP EGY EGP(Avadapay)",st:"К выполнению",a:"Oksana Sukhanova",u:"2026-03-26",bug:false},
+  {k:"PP-3156",s:"Analysis: Cross integration: Sauripay for Avadapay",st:"В работе",a:"Shukhrat Mirzaev",u:"2026-03-26",bug:false},
+  {k:"PP-3895",s:"[Bug]  Development: Mpesa (Safaricom) for Almarapay. Adding limits [9515]",st:"Готово",a:"Shukhrat Mirzaev",u:"2026-03-26",bug:true},
+  {k:"PP-2146",s:"Development: Jaytech (MNTX) for Sauripay",st:"Готово",a:"Ilgiz Muksinov",u:"2026-03-26",bug:false},
+  {k:"PP-2280",s:"Transfer to support: [9063] MTN JTCH XAF CMR (SauriPay)",st:"К выполнению",a:"Oksana Sukhanova",u:"2026-03-26",bug:false},
+  {k:"PP-2257",s:"Transfer to support: [9062] Orange JTCH XAF CMR (SauriPay)",st:"К выполнению",a:"Oksana Sukhanova",u:"2026-03-26",bug:false},
+  {k:"PP-3154",s:"Development: Payfast via ConnecFlow for Sauripay",st:"В работе",a:"ivan.kolesov",u:"2026-03-25",bug:false},
+  {k:"PP-3894",s:"[Bug]  Development: DTS for Dalapay. Adding limits for BF [9458][9459][9545]",st:"Готово",a:"Shukhrat Mirzaev",u:"2026-03-25",bug:true},
+  {k:"PP-3686",s:"[Bug]  Development: DTS for Dalapay. Adding limits XOF currency",st:"Готово",a:"Shukhrat Mirzaev",u:"2026-03-25",bug:true},
+  {k:"PP-3813",s:"Cost and fee setup: DTS for Dalapay",st:"Готово",a:"Uliana Tsaplina",u:"2026-03-25",bug:false},
+  {k:"PP-3893",s:"[Bug]  Development: invalid value for network parameter [9459]",st:"Готово",a:"Shukhrat Mirzaev",u:"2026-03-25",bug:true},
+  {k:"PP-3513",s:"Development: DTS for Dalapay",st:"IN TESTING",a:"Shukhrat Mirzaev",u:"2026-03-25",bug:false},
+  {k:"PP-3892",s:"Development: Clapay for Paysnapper",st:"К выполнению",a:"Kirill Sukhanov",u:"2026-03-25",bug:false},
+  {k:"PP-3472",s:"Transfer to Live: [9356] Airtel PYZ TZA TZS (Avadapay)",st:"К выполнению",a:"Oksana Sukhanova",u:"2026-03-25",bug:false},
+  {k:"PP-3742",s:"Development: PG10 for Avadapay",st:"Ready for testing",a:"Ilgiz Muksinov",u:"2026-03-25",bug:false},
+  {k:"PP-3766",s:"Transfer to Live: [9372] MTN PNS2 GHA GHS(Bitlipa)",st:"К выполнению",a:"Shukhrat Mirzaev",u:"2026-03-25",bug:false},
+  {k:"PP-3697",s:"Development: Feexpay for Almarapay",st:"IN TESTING",a:"Shukhrat Mirzaev",u:"2026-03-25",bug:false},
+  {k:"PP-3883",s:"Transfer to Live: [9525] [9526] [9527]",st:"К выполнению",a:"Oksana Sukhanova",u:"2026-03-25",bug:false},
+  {k:"PP-3549",s:"Transfer to Live: [9105] MTN FXP COG XAF(Dalapay)",st:"Готово",a:"Oksana Sukhanova",u:"2026-03-25",bug:false},
+  {k:"PP-3890",s:"Cost and fee setup: Feexpay for Almarapay",st:"Готово",a:"Uliana Tsaplina",u:"2026-03-25",bug:false},
+  {k:"PP-1548",s:"Integration: Clapay for Paysnapper",st:"В работе",a:"Oksana Sukhanova",u:"2026-03-25",bug:false},
+  {k:"PP-3045",s:"Development: Babimo for Almarapay",st:"On hold",a:"Zakhar Ringel",u:"2026-03-25",bug:false},
+  {k:"PP-3487",s:"Development: Bitolo for Avadapay",st:"On hold",a:"Shukhrat Mirzaev",u:"2026-03-25",bug:false},
+  {k:"PP-3880",s:"[Bug]  Development: Mpesa (Safaricom) for Almarapay. request error [9515]",st:"Готово",a:"Shukhrat Mirzaev",u:"2026-03-25",bug:true},
+  {k:"PP-3891",s:"[Bug]  Development: Feexpay for Almarapay. Adding limits [9526][9527]",st:"Готово",a:"Valentin Pervoy",u:"2026-03-25",bug:true},
+  {k:"PP-3774",s:"Development: DTS (GH, NGN, GM) for Dalapay",st:"В работе",a:"Aleksei Georgiev",u:"2026-03-25",bug:false},
+  {k:"PP-2286",s:"Cost and fee setup: Feexpay for Dalapay",st:"Готово",a:"Uliana Tsaplina",u:"2026-03-25",bug:false},
+  {k:"PP-3798",s:"Transfer to Live: [9452] OPayBLO NGA NGN(Avadapay)",st:"К выполнению",a:"Oksana Sukhanova",u:"2026-03-25",bug:false},
+  {k:"PP-3702",s:"Development: Payfonte for Almarapay",st:"On hold",a:"Aleksei Georgiev",u:"2026-03-25",bug:false},
+  {k:"PP-3889",s:"[Bug]  Development: Feexpay for Almarapay. Set limits 9525",st:"Готово",a:"Valentin Pervoy",u:"2026-03-25",bug:true},
+  {k:"PP-3580",s:"[Bug]  Development: Feexpay for Dalapay. Set limits 9105",st:"Готово",a:"Valentin Pervoy",u:"2026-03-25",bug:true},
+  {k:"PP-1431",s:"Development: Bitolo for Dalapay",st:"On hold",a:"Shukhrat Mirzaev",u:"2026-03-25",bug:false},
+  {k:"PP-2991",s:"Development: Airtel for Digicash",st:"Ready for testing",a:"Ilgiz Muksinov",u:"2026-03-25",bug:false},
+  {k:"PP-3382",s:"Development: Centiwise for Avadapay",st:"IN TESTING",a:"Kirill Sukhanov",u:"2026-03-25",bug:false},
+  {k:"PP-3869",s:"Transfer to Live: [2574] Wire Transfer9015crSRP MAR MAD(Avadapay)",st:"К выполнению",a:"Oksana Sukhanova",u:"2026-03-25",bug:false},
+  {k:"PP-670",s:"Integrate Payplus for Dalapay",st:"IN TESTING",a:"Shukhrat Mirzaev",u:"2026-03-25",bug:false},
+  {k:"PP-3887",s:"Transfer to Live: [906] MoovPPLS TGO XOF(Dalapay)",st:"К выполнению",a:"Oksana Sukhanova",u:"2026-03-25",bug:false},
+  {k:"PP-3579",s:"Development: Zedmobile SMS for Zoykpay",st:"К выполнению",a:"Dmitriy Shaydurov",u:"2026-03-25",bug:false},
+  {k:"PP-3731",s:"Development: Wallettec for Dalapay (Rwanda)",st:"On hold",a:"Ilgiz Muksinov",u:"2026-03-25",bug:false},
+  {k:"PP-3855",s:"[Bug]  Development: End2End for Paysnapper",st:"IN TESTING",a:"Kirill Sukhanov",u:"2026-03-25",bug:true},
+  {k:"PP-3446",s:"Transfer to Live: [9335] ATMGTW CIV XOF(Paysnapper)",st:"Ready for testing",a:"Shukhrat Mirzaev",u:"2026-03-25",bug:false},
+  {k:"PP-3662",s:"Development: Africell for Avadapay",st:"On hold",a:"Ilgiz Muksinov",u:"2026-03-24",bug:false},
+  {k:"PP-3885",s:"Transfer to Live: [9412] Bank TransferBLO ZAF ZAR(Avadapay)",st:"К выполнению",a:"Shukhrat Mirzaev",u:"2026-03-24",bug:false},
+  {k:"PP-2989",s:"Development: Mpesa for Digicash",st:"В работе",a:"Aleksei Georgiev",u:"2026-03-24",bug:false},
+  {k:"PP-3886",s:"Integration: new paybills Amways",st:"Готово",a:"Maria Tvilla",u:"2026-03-24",bug:false},
+  {k:"PP-2522",s:"Transfer to Live: [558] Orange PYZ CIV XOF (Dalapay)",st:"К выполнению",a:"Ilgiz Muksinov",u:"2026-03-24",bug:false},
+  {k:"PP-2525",s:"Transfer to Live: [561] Wave PYZ CIV XOF (Dalapay)",st:"IN TESTING",a:"Ilgiz Muksinov",u:"2026-03-24",bug:false},
+  {k:"PP-2524",s:"Transfer to Live: [560] Moov PYZ CIV XOF (Dalapay)",st:"К выполнению",a:"Oksana Sukhanova",u:"2026-03-24",bug:false},
+  {k:"PP-3882",s:"Set up payment limits: Payaza for Dalapay (Coast Ivory)",st:"IN TESTING",a:"Ilgiz Muksinov",u:"2026-03-24",bug:false},
+  {k:"PP-2523",s:"Transfer to Live: [559] MTN PYZ CIV XOF (Dalapay)",st:"К выполнению",a:"Oksana Sukhanova",u:"2026-03-24",bug:false},
+  {k:"PP-3439",s:"Development: End2End for Paysnapper",st:"IN TESTING",a:"Kirill Sukhanov",u:"2026-03-24",bug:false},
+  {k:"PP-3789",s:"Cost and fee setup: Onit Bank for Avadapay",st:"On hold",a:"anastasiia.gerasimova",u:"2026-03-24",bug:false},
+  {k:"PP-3783",s:"Cost and fee setup: Kiotapay Mpesa KE for Dalapay",st:"Готово",a:"anastasiia.gerasimova",u:"2026-03-24",bug:false},
+  {k:"PP-3537",s:"Development: Marasoftpay for Dalapay",st:"IN TESTING",a:"Kirill Sukhanov",u:"2026-03-24",bug:false},
+  {k:"PP-2225",s:"Development: PayWay for TikMoney",st:"On hold",a:"Valentin Pervoy",u:"2026-03-24",bug:false},
+  {k:"PP-1032",s:"Development: Payaza for Dalapay",st:"IN TESTING",a:"Ilgiz Muksinov",u:"2026-03-24",bug:false},
+  {k:"PP-2859",s:"Transfer to Live: Pixpay for SauriPay (9210) MTN PXN BEN XOF",st:"К выполнению",a:"Shukhrat Mirzaev",u:"2026-03-24",bug:false},
+  {k:"PP-3875",s:"[Bug]  Development: Paypro for Bogivapay (Brazil) Hide sensitive data",st:"Ready for testing",a:"Shukhrat Mirzaev",u:"2026-03-24",bug:true},
+  {k:"PP-3313",s:"Development: Ogateway for Paysnapper",st:"IN TESTING",a:"Shukhrat Mirzaev",u:"2026-03-24",bug:false},
+  {k:"PP-1169",s:"Development: Centiwise for Dalapay",st:"IN TESTING",a:"Kirill Sukhanov",u:"2026-03-24",bug:false},
+  {k:"PP-2084",s:"Development: Feexpay for Dalapay",st:"IN TESTING",a:"Shukhrat Mirzaev",u:"2026-03-24",bug:false},
+  {k:"PP-2942",s:"Development: Paypro for Bogivapay (Brazil)",st:"IN TESTING",a:"Shukhrat Mirzaev",u:"2026-03-24",bug:false},
+  {k:"PP-2825",s:"Development: Centiwise (new geos) for Dalapay",st:"IN TESTING",a:"Kirill Sukhanov",u:"2026-03-23",bug:false},
+  {k:"PP-3501",s:"Development: Paymetrust Togo for Dalapay",st:"On hold",a:"Alexey Sapozhnikov",u:"2026-03-23",bug:false},
+  {k:"PP-1806",s:"Integration: Paymetrust for Dalapay (Paripesa only)",st:"В работе",a:"Oksana Sukhanova",u:"2026-03-23",bug:false},
+  {k:"PP-3544",s:"Transfer to Live: [9404] ZAMANI CLP NER XOF(DALAPAY)",st:"Готово",a:"Oksana Sukhanova",u:"2026-03-23",bug:false},
+  {k:"PP-3092",s:"Development: Platcore (Morocco, Algeria) for Avadapay",st:"IN TESTING",a:"Ilgiz Muksinov",u:"2026-03-23",bug:false},
+  {k:"PP-1636",s:"Development: Kotani Pay for Dalapay",st:"IN TESTING",a:"Ilgiz Muksinov",u:"2026-03-23",bug:false},
+  {k:"PP-2990",s:"Development: Mixx for Digicash",st:"On hold",a:"Ilgiz Muksinov",u:"2026-03-23",bug:false},
+  {k:"PP-2474",s:"Development: Paygate (54pay) for Sauripay",st:"IN TESTING",a:"Zakhar Ringel",u:"2026-03-23",bug:false},
+  {k:"PP-2684",s:"Transfer to Live: [379] Tigo PYZ TZA TZS (Dalapay)",st:"К выполнению",a:"Oksana Sukhanova",u:"2026-03-23",bug:false},
+  {k:"PP-2699",s:"Development: Vesicash (Alexpay) for Paysnapper",st:"Готово",a:"Kirill Sukhanov",u:"2026-03-23",bug:false},
+  {k:"PP-2822",s:"Development: eWallet (Alexpay) for Paysnapper",st:"Готово",a:"Kirill Sukhanov",u:"2026-03-23",bug:false},
+  {k:"PP-2992",s:"Development: Halopesa for Digicash",st:"On hold",a:"ivan.kolesov",u:"2026-03-23",bug:false},
+  {k:"PP-3173",s:"Development: Wallettec Benin for Dalapay",st:"On hold",a:"Kirill Sukhanov",u:"2026-03-23",bug:false},
+  {k:"PP-3710",s:"Transfer to Live: [9502] MTN GTW UGA UGX(Paysnapper)",st:"Готово",a:"Oksana Sukhanova",u:"2026-03-23",bug:false},
+  {k:"PP-3816",s:"Transfer to Live: [9503] ATM GTW UGA UGX(Paysnapper)",st:"Готово",a:"Oksana Sukhanova",u:"2026-03-23",bug:false},
+  {k:"PP-3290",s:"Development: Alexpay for Almarapay",st:"Готово",a:"Shukhrat Mirzaev",u:"2026-03-23",bug:false},
+  {k:"PP-3298",s:"Development: Kaybic for Pixpay",st:"On hold",a:"ivan.kolesov",u:"2026-03-23",bug:false},
+  {k:"PP-3410",s:"[Bug]  Development: Alexpay for Almarapay. All gates, no country id",st:"Готово",a:"Shukhrat Mirzaev",u:"2026-03-23",bug:true},
+  {k:"PP-3417",s:"[Bug]  Development: Alexpay(eWallet) for Almarapay. unsupported operation",st:"Готово",a:"Shukhrat Mirzaev",u:"2026-03-23",bug:true},
+  {k:"PP-3590",s:"[Bug]  Merchant and gate creation: Paysnapper (GH, TZ, ZM) for Sauripay",st:"Готово",a:"Shukhrat Mirzaev",u:"2026-03-23",bug:true},
+  {k:"PP-3605",s:"Development: Bobplus UGX for Dalapay",st:"Готово",a:"Aleksandr Mironov",u:"2026-03-23",bug:false},
+  {k:"PP-3619",s:"Development: Zamtel for Zoykpay",st:"On hold",a:"ivan.kolesov",u:"2026-03-23",bug:false},
+  {k:"PP-3729",s:"Development: Transactpay for Zoykpay",st:"В работе",a:"ivan.kolesov",u:"2026-03-23",bug:false},
+  {k:"PP-3736",s:"Development: MTN for Caxsh",st:"On hold",a:"ivan.kolesov",u:"2026-03-23",bug:false},
+  {k:"PP-3804",s:"[Bug]  Transfer to Live: [9452] Implementation update Opay",st:"Готово",a:"Shukhrat Mirzaev",u:"2026-03-23",bug:true},
+  {k:"PP-3832",s:"Development: SasaPay for Dalapay (Tanzania)",st:"IN TESTING",a:"Shukhrat Mirzaev",u:"2026-03-23",bug:false},
+  {k:"PP-3868",s:"Transfer to Live: [2573] MTN9063crSRP CMR XAF(Avadapay)",st:"К выполнению",a:"Shukhrat Mirzaev",u:"2026-03-23",bug:false}
+];
+
+const STAGE = {
+  development:{label:"In Development",emoji:"⚙️",color:"#6366f1",bg:"#eef2ff",border:"#c7d2fe"},
+  testing:    {label:"Testing",emoji:"🧪",color:"#f59e0b",bg:"#fffbeb",border:"#fde68a"},
+  live:       {label:"Transferred to Live",emoji:"🚀",color:"#10b981",bg:"#ecfdf5",border:"#a7f3d0"}
+};
+const AVCOLORS=["#6366f1","#ec4899","#10b981","#f59e0b","#3b82f6","#8b5cf6","#ef4444","#14b8a6","#f97316","#84cc16"];
+
+function classify(i){
+  const s=i.s.toLowerCase(),st=i.st;
+  const done=["Готово","Done","Отказ"].includes(st);
+  const inTest=["IN TESTING","Ready for testing","Ready for release"].includes(st);
+  if(s.includes("transfer to live")||s.includes("transfer to support")){return done?"live":"testing";}
+  if(s.includes("cost and fee")||s.includes("set up payment")){return done?"live":inTest?"testing":"development";}
+  if(s.startsWith("[bug]")||i.bug){return done?"live":inTest?"testing":"development";}
+  if(s.includes("development:")||s.includes("integrate ")||s.includes("integration:")){return inTest?"testing":done?"live":"development";}
+  return inTest?"testing":done?"live":"development";
+}
+
+function parseInfo(s){
+  const clean=s.replace(/^\[Bug\]\s*/gi,"").trim();
+  const m=clean.match(/^(?:Development|Cost and fee setup|Transfer to (?:Live|support)|Set up payment limits|Integrate|Integration)[\s\S]*?:\s*(.+?)\s+for\s+(.+)/i);
+  if(m) return {provider:m[1].trim(),partner:m[2].trim()};
+  const bm=clean.match(/^(?:Transfer to Live|Transfer to support):\s*\[[\d\s,\[\]]+\]\s*(.+)/i);
+  if(bm){const r=bm[1].trim();const p=r.match(/^(.+?)\((.+?)\)$/);if(p)return{provider:p[1].trim(),partner:p[2].trim()};return{provider:r,partner:r.split(/\s+/).at(-1)?.replace(/[()]/g,"")||""};}
+  return{provider:clean,partner:""};
+}
+
+function avatarColor(n){return AVCOLORS[(n?.charCodeAt(0)||0)%AVCOLORS.length];}
+function avatar(n,sz=16){const ini=n?n.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase():"?";return`<span class="avatar" style="background:${avatarColor(n)};width:${sz}px;height:${sz}px;font-size:${sz*.42}px">${ini}</span>`;}
+
+function statusStyle(st){
+  if(["Готово","Done"].includes(st)) return"background:#ecfdf5;color:#10b981";
+  if(["В работе","In Progress"].includes(st)) return"background:#eff6ff;color:#3b82f6";
+  if(["IN TESTING","Ready for testing","Ready for release"].includes(st)) return"background:#fffbeb;color:#f59e0b";
+  return"background:#f8fafc;color:#64748b";
+}
+
+// Build week list
+function getWeeks(){
+  const wm=new Map();
+  ISSUES.forEach(i=>{
+    const d=new Date(i.u),day=d.getDay();
+    const mon=new Date(d);mon.setDate(d.getDate()+(day===0?-6:1-day));mon.setHours(0,0,0,0);
+    const sun=new Date(mon);sun.setDate(mon.getDate()+6);
+    const key=mon.toISOString().slice(0,10);
+    if(!wm.has(key)) wm.set(key,{key,label:`${mon.toLocaleDateString("en-GB",{day:"2-digit",month:"short"})} – ${sun.toLocaleDateString("en-GB",{day:"2-digit",month:"short"})}`,start:new Date(mon),end:new Date(sun.setHours(23,59,59,999))});
+  });
+  return Array.from(wm.values()).sort((a,b)=>b.key.localeCompare(a.key));
+}
+
+let currentWeek="all", groupBy="partner";
+const weeks=getWeeks();
+
+// Build week buttons
+const wContainer=document.getElementById("week-btns");
+weeks.forEach(w=>{
+  const b=document.createElement("button");
+  b.className="btn week inactive";b.dataset.week=w.key;b.textContent=w.label;
+  b.onclick=()=>setWeek(w.key);wContainer.appendChild(b);
+});
+
+function setWeek(k){
+  currentWeek=k;
+  document.querySelectorAll(".btn.week").forEach(b=>{
+    b.className="btn week "+(b.dataset.week===k?"active":"inactive");
+  });
+  render();
+}
+
+function setGroup(g){
+  groupBy=g;
+  document.getElementById("btn-partner").className="btn "+(g==="partner"?"active":"inactive");
+  document.getElementById("btn-provider").className="btn "+(g==="provider"?"active":"inactive");
+  render();
+}
+
+const collapsed={};
+function toggleGroup(stageKey,name){
+  const id=stageKey+"___"+name;collapsed[id]=!collapsed[id];render();}
+
+function render(){
+  const q=document.getElementById("search").value.toLowerCase();
+  let data=ISSUES;
+  if(currentWeek!=="all"){
+    const wk=weeks.find(w=>w.key===currentWeek);
+    if(wk) data=data.filter(i=>{const d=new Date(i.u);return d>=wk.start&&d<=wk.end;});
+  }
+  if(q) data=data.filter(i=>i.s.toLowerCase().includes(q)||(i.a||"").toLowerCase().includes(q)||i.k.toLowerCase().includes(q));
+
+  const cats={development:[],testing:[],live:[]};
+  data.forEach(i=>{const c=classify(i);if(cats[c])cats[c].push(i);});
+
+  const total=data.length;
+  document.getElementById("cnt-dev").textContent=cats.development.length;
+  document.getElementById("cnt-test").textContent=cats.testing.length;
+  document.getElementById("cnt-live").textContent=cats.live.length;
+  document.getElementById("cnt-total").textContent=total;
+
+  const grid=document.getElementById("grid");
+  const noRes=document.getElementById("no-results");
+
+  if(total===0){grid.innerHTML="";noRes.style.display="block";return;}
+  noRes.style.display="none";
+
+  grid.innerHTML=Object.entries(STAGE).map(([sk,cfg])=>{
+    const items=cats[sk];
+    // Group
+    const gm={};
+    items.forEach(i=>{
+      const{provider,partner}=parseInfo(i.s);
+      const key=groupBy==="partner"?(partner.trim()||"Other / Unknown"):provider.split(/[\s(]/)[0]||"Other";
+      if(!gm[key])gm[key]=[];gm[key].push(i);
+    });
+    const groups=Object.entries(gm).sort((a,b)=>b[1].length-a[1].length);
+    const groupCount=groups.length;
+
+    const groupsHtml=items.length===0
+      ? `<div class="empty">No issues</div>`
+      : groups.map(([name,gItems])=>{
+          const id=sk+"___"+name;
+          const open=!collapsed[id];
+          const cardsHtml=gItems.map(i=>{
+            const{provider,partner}=parseInfo(i.s);
+            const isBug=i.bug||i.s.toLowerCase().includes("[bug]");
+            const sp=provider.length>52?provider.slice(0,52)+"…":provider;
+            return`<div class="card">
+              <div class="card-top">
+                <a href="https://modumsystems.atlassian.net/browse/${i.k}" target="_blank" class="card-key" style="color:${cfg.color};background:${cfg.bg}">${i.k}</a>
+                ${isBug?'<span class="bug-badge">🐞 Bug</span>':""}
+              </div>
+              <div class="card-title">${sp}</div>
+              ${partner?`<div><span class="partner-tag">→ ${partner}</span></div>`:""}
+              <div class="card-footer">
+                <span class="status-pill" style="${statusStyle(i.st)}">${i.st}</span>
+                <div class="assignee">${avatar(i.a)}<span class="assignee-name">${(i.a||"—").split(" ")[0]}</span><span class="date">${i.u.slice(5)}</span></div>
+              </div>
+            </div>`;
+          }).join("");
+          return`<div class="group">
+            <button class="group-hdr" onclick="toggleGroup('${sk}','${name.replace(/'/g,"\\'")}')">
+              <span class="group-name">${name}</span>
+              <div class="group-right">
+                <span class="group-cnt" style="background:${cfg.color}">${gItems.length}</span>
+                <span class="arrow" style="transform:${open?"rotate(0)":"rotate(-90deg)"}">▾</span>
+              </div>
+            </button>
+            ${open?`<div class="group-body">${cardsHtml}</div>`:""}
+          </div>`;
+        }).join("");
+
+    return`<div>
+      <div class="col-header" style="background:${cfg.bg};border:1px solid ${cfg.border}">
+        <div>
+          <div class="col-title" style="color:${cfg.color}">${cfg.emoji} ${cfg.label}</div>
+          <div class="col-sub">${groupCount} group${groupCount!==1?"s":""}</div>
+        </div>
+        <div class="col-badge" style="background:${cfg.color}">${items.length}</div>
+      </div>
+      ${groupsHtml}
+    </div>`;
+  }).join("");
+}
+
+// Init dates
+const now=new Date();
+document.getElementById("gen-date").textContent=now.toLocaleString("en-GB",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
+document.getElementById("snap-date").textContent="26 Mar 2026";
+
+render();
+</script>
+</body>
+</html>
