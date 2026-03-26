@@ -1,1 +1,265 @@
-Loading...
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>IPOP Integration Progress Dashboard</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#f1f5f9;min-height:100vh;color:#1e293b}
+  .header{background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);color:#fff;padding:22px 28px 18px}
+  .header-sub{font-size:10px;font-weight:700;letter-spacing:.12em;color:#475569;text-transform:uppercase;margin-bottom:4px}
+  .header h1{font-size:20px;font-weight:800;letter-spacing:-.02em}
+  .header-meta{font-size:11px;color:#64748b;margin-top:3px}
+  .stats{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+  .stat{background:rgba(255,255,255,.06);border-radius:10px;padding:9px 17px}
+  .stat-n{font-size:22px;font-weight:800}
+  .stat-l{font-size:10px;color:#64748b;font-weight:600;margin-top:1px}
+  .toolbar{background:#fff;border-bottom:1px solid #e2e8f0;padding:11px 28px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .toolbar span{font-size:11px;color:#64748b;font-weight:600}
+  .btn{padding:5px 13px;font-size:11px;font-weight:700;border-radius:7px;border:none;cursor:pointer;transition:background .15s}
+  .btn.active{background:#1e293b;color:#fff}
+  .btn.inactive{background:#f1f5f9;color:#64748b}
+  .btn.week.active{background:#6366f1;color:#fff}
+  input[type=search]{border:1px solid #e2e8f0;border-radius:8px;padding:5px 11px;font-size:12px;width:220px;outline:none}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;padding:20px 28px}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .col-header{border-radius:12px;padding:13px 16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+  .col-title{font-weight:700;font-size:14px}
+  .col-sub{font-size:11px;color:#94a3b8;margin-top:2px}
+  .col-badge{border-radius:20px;min-width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;padding:0 8px}
+  .group{background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;overflow:hidden;margin-bottom:10px}
+  .group-hdr{width:100%;display:flex;justify-content:space-between;align-items:center;padding:9px 13px;background:none;border:none;cursor:pointer;text-align:left}
+  .group-name{font-size:11px;font-weight:700;color:#374151}
+  .group-right{display:flex;align-items:center;gap:7px}
+  .group-cnt{border-radius:12px;padding:1px 8px;font-size:11px;font-weight:700;color:#fff}
+  .arrow{color:#94a3b8;font-size:11px;transition:transform .2s;display:inline-block}
+  .group-body{padding:0 9px 9px;display:flex;flex-direction:column;gap:7px}
+  .card{background:#fff;border-radius:10px;border:1px solid #e2e8f0;padding:11px 14px;transition:box-shadow .15s}
+  .card:hover{box-shadow:0 3px 12px rgba(0,0,0,.08)}
+  .card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+  .card-key{font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;text-decoration:none}
+  .bug-badge{font-size:9px;background:#fef2f2;color:#ef4444;border:1px solid #fecaca;padding:1px 6px;border-radius:4px;font-weight:700}
+  .card-title{font-size:12px;font-weight:600;line-height:1.35;margin-bottom:5px}
+  .partner-tag{font-size:10px;background:#f1f5f9;color:#64748b;padding:2px 7px;border-radius:4px;display:inline-block;margin-bottom:5px}
+  .card-footer{display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding-top:6px;border-top:1px solid #f1f5f9}
+  .status-pill{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600}
+  .assignee{display:flex;align-items:center;gap:4px}
+  .avatar{width:16px;height:16px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#fff;flex-shrink:0}
+  .assignee-name{font-size:10px;color:#94a3b8}
+  .date{font-size:9px;color:#cbd5e1;margin-left:4px}
+  .empty{text-align:center;padding:32px;color:#cbd5e1;font-size:13px;background:#fff;border-radius:10px;border:1px dashed #e2e8f0}
+  .footer{border-top:1px solid #e2e8f0;padding:10px 28px;text-align:center;background:#fff;font-size:11px;color:#94a3b8}
+  .sep{width:1px;height:22px;background:#e2e8f0}
+  #no-results{display:none;text-align:center;padding:48px;color:#64748b;font-size:14px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-sub">Payment Platform · IPOP</div>
+  <h1>Integration Progress Dashboard</h1>
+  <div class="header-meta">📅 Generated: <span id="gen-date"></span> &nbsp;·&nbsp; 100 issues from Jira PP (last 30 days)</div>
+  <div class="stats">
+    <div class="stat"><div class="stat-n" id="cnt-dev">–</div><div class="stat-l">⚙️ In Development</div></div>
+    <div class="stat"><div class="stat-n" id="cnt-test">–</div><div class="stat-l">🧪 Testing</div></div>
+    <div class="stat"><div class="stat-n" id="cnt-live">–</div><div class="stat-l">🚀 Transferred to Live</div></div>
+    <div class="stat"><div class="stat-n" id="cnt-total">–</div><div class="stat-l">📋 Total</div></div>
+  </div>
+</div>
+
+<div class="toolbar">
+  <span>📅 Week:</span>
+  <div id="week-btns" style="display:flex;gap:6px;flex-wrap:wrap">
+    <button class="btn week active" data-week="all" onclick="setWeek('all')">All</button>
+  </div>
+  <div class="sep"></div>
+  <span>Group by:</span>
+  <button class="btn active" id="btn-partner" onclick="setGroup('partner')">Partner</button>
+  <button class="btn inactive" id="btn-provider" onclick="setGroup('provider')">Provider</button>
+  <div class="sep"></div>
+  <input type="search" id="search" placeholder="🔍  Search…" oninput="render()"/>
+</div>
+
+<div class="grid" id="grid"></div>
+<div id="no-results">No issues match your filters.</div>
+
+<div class="footer">
+  Integration Dashboard · modumsystems.atlassian.net · Data snapshot: <span id="snap-date"></span>
+</div>
+
+<script>
+const ISSUES = [];
+
+const STAGE = {
+  development:{label:"In Development",emoji:"⚙️",color:"#6366f1",bg:"#eef2ff",border:"#c7d2fe"},
+  testing:    {label:"Testing",emoji:"🧪",color:"#f59e0b",bg:"#fffbeb",border:"#fde68a"},
+  live:       {label:"Transferred to Live",emoji:"🚀",color:"#10b981",bg:"#ecfdf5",border:"#a7f3d0"}
+};
+const AVCOLORS=["#6366f1","#ec4899","#10b981","#f59e0b","#3b82f6","#8b5cf6","#ef4444","#14b8a6","#f97316","#84cc16"];
+
+function classify(i){
+  const s=i.s.toLowerCase(),st=i.st;
+  const done=["Готово","Done","Отказ"].includes(st);
+  const inTest=["IN TESTING","Ready for testing","Ready for release"].includes(st);
+  if(s.includes("transfer to live")||s.includes("transfer to support")){return done?"live":"testing";}
+  if(s.includes("cost and fee")||s.includes("set up payment")){return done?"live":inTest?"testing":"development";}
+  if(s.startsWith("[bug]")||i.bug){return done?"live":inTest?"testing":"development";}
+  if(s.includes("development:")||s.includes("integrate ")||s.includes("integration:")){return inTest?"testing":done?"live":"development";}
+  return inTest?"testing":done?"live":"development";
+}
+
+function parseInfo(s){
+  const clean=s.replace(/^\[Bug\]\s*/gi,"").trim();
+  const m=clean.match(/^(?:Development|Cost and fee setup|Transfer to (?:Live|support)|Set up payment limits|Integrate|Integration)[\s\S]*?:\s*(.+?)\s+for\s+(.+)/i);
+  if(m) return {provider:m[1].trim(),partner:m[2].trim()};
+  const bm=clean.match(/^(?:Transfer to Live|Transfer to support):\s*\[[\d\s,\[\]]+\]\s*(.+)/i);
+  if(bm){const r=bm[1].trim();const p=r.match(/^(.+?)\((.+?)\)$/);if(p)return{provider:p[1].trim(),partner:p[2].trim()};return{provider:r,partner:r.split(/\s+/).at(-1)?.replace(/[()]/g,"")||""};}
+  return{provider:clean,partner:""};
+}
+
+function avatarColor(n){return AVCOLORS[(n?.charCodeAt(0)||0)%AVCOLORS.length];}
+function avatar(n,sz=16){const ini=n?n.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase():"?";return`<span class="avatar" style="background:${avatarColor(n)};width:${sz}px;height:${sz}px;font-size:${sz*.42}px">${ini}</span>`;}
+
+function statusStyle(st){
+  if(["Готово","Done"].includes(st)) return"background:#ecfdf5;color:#10b981";
+  if(["В работе","In Progress"].includes(st)) return"background:#eff6ff;color:#3b82f6";
+  if(["IN TESTING","Ready for testing","Ready for release"].includes(st)) return"background:#fffbeb;color:#f59e0b";
+  return"background:#f8fafc;color:#64748b";
+}
+
+// Build week list
+function getWeeks(){
+  const wm=new Map();
+  ISSUES.forEach(i=>{
+    const d=new Date(i.u),day=d.getDay();
+    const mon=new Date(d);mon.setDate(d.getDate()+(day===0?-6:1-day));mon.setHours(0,0,0,0);
+    const sun=new Date(mon);sun.setDate(mon.getDate()+6);
+    const key=mon.toISOString().slice(0,10);
+    if(!wm.has(key)) wm.set(key,{key,label:`${mon.toLocaleDateString("en-GB",{day:"2-digit",month:"short"})} – ${sun.toLocaleDateString("en-GB",{day:"2-digit",month:"short"})}`,start:new Date(mon),end:new Date(sun.setHours(23,59,59,999))});
+  });
+  return Array.from(wm.values()).sort((a,b)=>b.key.localeCompare(a.key));
+}
+
+let currentWeek="all", groupBy="partner";
+const weeks=getWeeks();
+
+// Build week buttons
+const wContainer=document.getElementById("week-btns");
+weeks.forEach(w=>{
+  const b=document.createElement("button");
+  b.className="btn week inactive";b.dataset.week=w.key;b.textContent=w.label;
+  b.onclick=()=>setWeek(w.key);wContainer.appendChild(b);
+});
+
+function setWeek(k){
+  currentWeek=k;
+  document.querySelectorAll(".btn.week").forEach(b=>{
+    b.className="btn week "+(b.dataset.week===k?"active":"inactive");
+  });
+  render();
+}
+
+function setGroup(g){
+  groupBy=g;
+  document.getElementById("btn-partner").className="btn "+(g==="partner"?"active":"inactive");
+  document.getElementById("btn-provider").className="btn "+(g==="provider"?"active":"inactive");
+  render();
+}
+
+const collapsed={};
+function toggleGroup(stageKey,name){
+  const id=stageKey+"___"+name;collapsed[id]=!collapsed[id];render();}
+
+function render(){
+  const q=document.getElementById("search").value.toLowerCase();
+  let data=ISSUES;
+  if(currentWeek!=="all"){
+    const wk=weeks.find(w=>w.key===currentWeek);
+    if(wk) data=data.filter(i=>{const d=new Date(i.u);return d>=wk.start&&d<=wk.end;});
+  }
+  if(q) data=data.filter(i=>i.s.toLowerCase().includes(q)||(i.a||"").toLowerCase().includes(q)||i.k.toLowerCase().includes(q));
+
+  const cats={development:[],testing:[],live:[]};
+  data.forEach(i=>{const c=classify(i);if(cats[c])cats[c].push(i);});
+
+  const total=data.length;
+  document.getElementById("cnt-dev").textContent=cats.development.length;
+  document.getElementById("cnt-test").textContent=cats.testing.length;
+  document.getElementById("cnt-live").textContent=cats.live.length;
+  document.getElementById("cnt-total").textContent=total;
+
+  const grid=document.getElementById("grid");
+  const noRes=document.getElementById("no-results");
+
+  if(total===0){grid.innerHTML="";noRes.style.display="block";return;}
+  noRes.style.display="none";
+
+  grid.innerHTML=Object.entries(STAGE).map(([sk,cfg])=>{
+    const items=cats[sk];
+    // Group
+    const gm={};
+    items.forEach(i=>{
+      const{provider,partner}=parseInfo(i.s);
+      const key=groupBy==="partner"?(partner.trim()||"Other / Unknown"):provider.split(/[\s(]/)[0]||"Other";
+      if(!gm[key])gm[key]=[];gm[key].push(i);
+    });
+    const groups=Object.entries(gm).sort((a,b)=>b[1].length-a[1].length);
+    const groupCount=groups.length;
+
+    const groupsHtml=items.length===0
+      ? `<div class="empty">No issues</div>`
+      : groups.map(([name,gItems])=>{
+          const id=sk+"___"+name;
+          const open=!collapsed[id];
+          const cardsHtml=gItems.map(i=>{
+            const{provider,partner}=parseInfo(i.s);
+            const isBug=i.bug||i.s.toLowerCase().includes("[bug]");
+            const sp=provider.length>52?provider.slice(0,52)+"…":provider;
+            return`<div class="card">
+              <div class="card-top">
+                <a href="https://modumsystems.atlassian.net/browse/${i.k}" target="_blank" class="card-key" style="color:${cfg.color};background:${cfg.bg}">${i.k}</a>
+                ${isBug?'<span class="bug-badge">🐞 Bug</span>':""}
+              </div>
+              <div class="card-title">${sp}</div>
+              ${partner?`<div><span class="partner-tag">→ ${partner}</span></div>`:""}
+              <div class="card-footer">
+                <span class="status-pill" style="${statusStyle(i.st)}">${i.st}</span>
+                <div class="assignee">${avatar(i.a)}<span class="assignee-name">${(i.a||"—").split(" ")[0]}</span><span class="date">${i.u.slice(5)}</span></div>
+              </div>
+            </div>`;
+          }).join("");
+          return`<div class="group">
+            <button class="group-hdr" onclick="toggleGroup('${sk}','${name.replace(/'/g,"\\'")}')">
+              <span class="group-name">${name}</span>
+              <div class="group-right">
+                <span class="group-cnt" style="background:${cfg.color}">${gItems.length}</span>
+                <span class="arrow" style="transform:${open?"rotate(0)":"rotate(-90deg)"}">▾</span>
+              </div>
+            </button>
+            ${open?`<div class="group-body">${cardsHtml}</div>`:""}
+          </div>`;
+        }).join("");
+
+    return`<div>
+      <div class="col-header" style="background:${cfg.bg};border:1px solid ${cfg.border}">
+        <div>
+          <div class="col-title" style="color:${cfg.color}">${cfg.emoji} ${cfg.label}</div>
+          <div class="col-sub">${groupCount} group${groupCount!==1?"s":""}</div>
+        </div>
+        <div class="col-badge" style="background:${cfg.color}">${items.length}</div>
+      </div>
+      ${groupsHtml}
+    </div>`;
+  }).join("");
+}
+
+// Init dates
+const now=new Date();
+document.getElementById("gen-date").textContent=now.toLocaleString("en-GB",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
+document.getElementById("snap-date").textContent="26 Mar 2026";
+
+render();
+</script>
+</body>
+</html>
